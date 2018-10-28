@@ -51,9 +51,23 @@ nearestRoot :: [Float] -> Float -> Float -> Float -> Float
 nearestRoot xs x x' eps = 0.0
 
 -- Exercise 7
-data Instruction = Add | Subtract | Multiply | Duplicate | Pop deriving (Eq, Show)
+data Instruction = Add | Multiply | Duplicate | Pop deriving (Eq, Show)
 executeInstructionSequence :: [Int] -> [Instruction] -> [Int]
-executeInstructionSequence ns ins = []
+executeInstructionSequence ns [] = ns
+executeInstructionSequence ns (i:ins) = executeInstructionSequence ( executeInstruction ns i ) ins
+
+executeInstruction :: [Int] -> Instruction -> [Int]
+executeInstruction ns i
+    | i == Add = addInstruct ns
+    | i == Multiply = multInstruct ns
+    | i == Duplicate = ns !! 0 : ns
+    | i == Pop = tail ns
+
+addInstruct :: [Int] -> [Int]
+addInstruct (a:b:xs) = a+b : xs
+
+multInstruct :: [Int] -> [Int]
+multInstruct (a:b:xs) = a*b : xs
 
 -- Exercise 8
 optimalSequence :: Int -> [Instruction]
@@ -80,10 +94,7 @@ extractMessage s = ""
 
 -- Exercise 13
 -- return a stream which is different from all streams of the given stream
--- use Cantor's diagonal method 
--- the first element of the result is 1 more than the first element of the first stream
--- the second element of the result is 1 more than the second element of the first and second streams
--- and so on
+-- you may choose to use Cantor's diagonal method 
 differentStream :: [[Int]] -> [Int]
 differentStream ss = []
 
