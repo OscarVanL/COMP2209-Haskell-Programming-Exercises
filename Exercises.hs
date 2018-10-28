@@ -63,6 +63,7 @@ executeInstruction ns i
     | i == Duplicate = ns !! 0 : ns
     | i == Pop = tail ns
 
+    
 addInstruct :: [Int] -> [Int]
 addInstruct (a:b:xs) = a+b : xs
 
