@@ -63,7 +63,6 @@ executeInstruction ns i
     | i == Duplicate = ns !! 0 : ns
     | i == Pop = tail ns
 
-    
 addInstruct :: [Int] -> [Int]
 addInstruct (a:b:xs) = a+b : xs
 
@@ -91,7 +90,27 @@ drawEllipse x y a b = []
 -- Exercise 12
 -- extract a message hidden using a simple steganography technique
 extractMessage :: String -> String
-extractMessage s = ""
+extractMessage s = bitDecoder ( convertToNums ( extractDigits s )) ""
+
+--Takes the full string and extracts only 0s and 1s.
+extractDigits :: String -> String
+extractDigits [] = []
+extractDigits (x:xs) = if  x == '0' || x == '1'
+    then x : (extractDigits xs)
+    else (extractDigits xs)
+
+--Converts the 0s and 1s (in string form) to int list form
+convertToNums :: String -> [Int]
+convertToNums str = [read [num] :: Int | num <- str]
+
+--Decodes the list of ints to their respective letters and constructs the string output
+bitDecoder :: [Int] -> String -> String
+bitDecoder [] str = str 
+bitDecoder (a:b:xs) str
+    | a == 0 && b == 0 = bitDecoder xs (str ++ "a")
+    | a == 0 && b == 1 = bitDecoder xs (str ++ "b")
+    | a == 1 && b == 0 = bitDecoder xs (str ++ "c")
+    | a == 1 && b == 1 = bitDecoder xs (str ++ "d")
 
 -- Exercise 13
 -- return a stream which is different from all streams of the given stream
