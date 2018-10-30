@@ -90,7 +90,29 @@ executeInstruction (a:b:ns) i
 
 -- Exercise 8
 optimalSequence :: Int -> [Instruction]
-optimalSequence n = [] 
+optimalSequence 0 = []
+optimalSequence 1 = []
+optimalSequence n =
+    -- Case where n is a result of 2^x, we only need x combinations of [D,M]
+    if n == 2 ^ floor (logBase 2 (toEnum(n))) 
+        then composeOptimised (floor (logBase 2 (toEnum(n))))
+    else
+        composeDuplicate (n - 2^ floor (logBase 2 (toEnum(n)))) ++ composeOptimised (floor (logBase 2 (toEnum(n)))) ++ composeMultiply (n - 2^ floor (logBase 2 (toEnum(n))))
+
+composeDuplicate :: Int -> [Instruction]
+composeDuplicate 0 = []
+composeDuplicate n = [Duplicate] ++ composeDuplicate (n-1)
+
+composeMultiply :: Int -> [Instruction]
+composeMultiply 0 = []
+composeMultiply n = [Multiply] ++ composeMultiply (n-1)
+
+composeOptimised :: Int -> [Instruction]
+composeOptimised 0 = []
+composeOptimised n
+    | n > 0 = [Duplicate, Multiply] ++ composeOptimised (n-1)
+
+
 
 -- Exercise 9
 findBusyBeavers :: [Int] -> [[Instruction]]
