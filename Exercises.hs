@@ -19,7 +19,32 @@ module Exercises (splitSort, longestCommonSubList,
 -- split a given list into sub-lists 
 -- each of these must be strictly ascending, descending, or equal
 splitSort :: Ord a => [a] -> [[a]] 
-splitSort ns = [[]]
+splitSort [] = []
+splitSort (x:y:ns)
+    | x == y = [fst (eqSub (x:y:[]) ns)]  ++ splitSort (snd (eqSub (x:y:[]) ns))
+    | x > y = [fst (decrSub (x:y:[]) ns)] ++ splitSort (snd (decrSub (x:y:[]) ns))
+    | x < y = [fst (incrSub (x:y:[]) ns)] ++ splitSort (snd (incrSub (x:y:[]) ns))
+
+eqSub :: Ord a => [a] -> [a] -> ([a],[a])
+eqSub sublist [] = (sublist, [])
+eqSub sublist (n:ns) =
+    if n == (sublist !! 0)
+        then eqSub (n:sublist) ns
+    else (sublist , n:ns)
+
+decrSub :: Ord a => [a] -> [a] -> ([a],[a])
+decrSub sublist [] = (sublist, [])
+decrSub sublist (n:ns) =
+    if n < sublist !! (length sublist - 1)
+        then decrSub (sublist ++ [n]) ns
+    else (sublist, n:ns)
+
+incrSub :: Ord a => [a] -> [a] -> ([a],[a])
+incrSub sublist [] = (sublist, [])
+incrSub sublist (n:ns) = 
+    if n > sublist !! (length sublist - 1)
+        then incrSub (sublist ++ [n]) ns
+    else (sublist, n:ns)
 
 -- Exercise 2
 -- longest common sub-list of a finite list of finite list
@@ -57,17 +82,11 @@ executeInstructionSequence ns [] = ns
 executeInstructionSequence ns (i:ins) = executeInstructionSequence ( executeInstruction ns i ) ins
 
 executeInstruction :: [Int] -> Instruction -> [Int]
-executeInstruction ns i
-    | i == Add = addInstruct ns
-    | i == Multiply = multInstruct ns
+executeInstruction (a:b:ns) i
+    | i == Add = a+b : ns
+    | i == Multiply = a*b : ns
     | i == Duplicate = ns !! 0 : ns
     | i == Pop = tail ns
-
-addInstruct :: [Int] -> [Int]
-addInstruct (a:b:xs) = a+b : xs
-
-multInstruct :: [Int] -> [Int]
-multInstruct (a:b:xs) = a*b : xs
 
 -- Exercise 8
 optimalSequence :: Int -> [Instruction]
