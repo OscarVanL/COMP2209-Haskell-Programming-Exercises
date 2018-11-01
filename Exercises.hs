@@ -82,17 +82,27 @@ executeInstructionSequence ns [] = ns
 executeInstructionSequence ns (i:ins) = executeInstructionSequence ( executeInstruction ns i ) ins
 
 executeInstruction :: [Int] -> Instruction -> [Int]
+executeInstruction [_] Pop = []
 executeInstruction (a:b:ns) i
-    | i == Add = a+b : ns
-    | i == Multiply = a*b : ns
-    | i == Duplicate = ns !! 0 : ns
-    | i == Pop = tail ns
+    | i == Add && length (a:b:ns) > 1 = a+b : ns
+    | i == Multiply && length (a:b:ns) > 1 = a*b : ns
+    | i == Duplicate = a:a:b:ns
+    | i == Pop && length (ns) > 0 = b:ns
+    | i == Pop && length(ns) == 0 = [b]
+    | otherwise = ns
 
 -- Exercise 8
 optimalSequence :: Int -> [Instruction]
 optimalSequence 0 = []
 optimalSequence 1 = []
-optimalSequence n =
+optimalSequence n
+    | n == 2 ^ floor (logBase 2 (toEnum(n))) = composeOptimised (floor (logBase 2 (toEnum(n))))
+    | n `mod` 2 == 0 = constructSequence (n `div` 2) ++ constructSequence 2 
+    | n `mod` 2 == 1 = [Duplicate] ++ optimalSequence (n-1) ++ [Multiply]
+
+constructSequence :: Int -> [Instruction]
+constructSequence 1 = []
+constructSequence n =
     -- Case where n is a result of 2^x, we only need x combinations of [D,M]
     if n == 2 ^ floor (logBase 2 (toEnum(n))) 
         then composeOptimised (floor (logBase 2 (toEnum(n))))
@@ -112,11 +122,43 @@ composeOptimised 0 = []
 composeOptimised n
     | n > 0 = [Duplicate, Multiply] ++ composeOptimised (n-1)
 
-
-
 -- Exercise 9
 findBusyBeavers :: [Int] -> [[Instruction]]
-findBusyBeavers ns = []
+findBusyBeavers [] = []
+findBusyBeavers ns = removeDuplicates( findCombos (length ns - 1) ) --findLargest ns (findCombos (length ns) 0
+
+instruct = [Pop, Add, Multiply]
+
+--Finds all possible permutations of combinations of instructions of a defined length.
+findCombos :: Int -> [[Instruction]]
+findCombos len = removeDuplicates( [1..len] >>= \n -> mapM (const instruct) [1..len] )
+
+--Removes any duplicate lists of instructions from the list of combinations.
+removeDuplicates :: [[Instruction]] -> [[Instruction]]
+removeDuplicates [] = []
+removeDuplicates (i:is) = i : removeDuplicates (filter (/= i) is)
+
+--Testing function only. Not required.
+executeLargest :: [Int] -> Int
+executeLargest [] = 0
+executeLargest ns = findLargest ns (findCombos (length ns - 1)) 0
+
+--Finds the largest possible result from any of the combinations.
+findLargest :: [Int] -> [[Instruction]] -> Int -> Int
+findLargest ns [] max = max
+findLargest [] is max = 0
+findLargest ns (i:is) max =
+    if head (executeInstructionSequence ns i) > max
+        then findLargest ns is (head (executeInstructionSequence ns i))
+    else findLargest ns is max
+
+findLargestInstruction :: [Int] -> Int -> [[Instruction]] -> [[Instruction]]
+findLargestInstruction _ _ [] = []
+
+findLargestInstructions ns sum (i:is) =
+    if (head (executeInstructionSequence ns i)) == sum
+        then [i] ++ (findLargestInstruction ns sum is)
+    else []
 
 -- Exercise 10
 data Rectangle = Rectangle (Int, Int) (Int, Int) deriving (Eq, Show)
