@@ -125,40 +125,39 @@ composeOptimised n
 -- Exercise 9
 findBusyBeavers :: [Int] -> [[Instruction]]
 findBusyBeavers [] = []
-findBusyBeavers ns = removeDuplicates( findCombos (length ns - 1) ) --findLargest ns (findCombos (length ns) 0
+findBusyBeavers ns = findLargestInstruction ns (executeLargest ns) (findCombos ((length ns) -1))
 
+instruct :: [Instruction]
 instruct = [Pop, Add, Multiply]
 
 --Finds all possible permutations of combinations of instructions of a defined length.
 findCombos :: Int -> [[Instruction]]
-findCombos len = removeDuplicates( [1..len] >>= \n -> mapM (const instruct) [1..len] )
+findCombos len = removeDuplicates( [1..len] >>= \len -> mapM (const instruct) [1..len] )
 
 --Removes any duplicate lists of instructions from the list of combinations.
 removeDuplicates :: [[Instruction]] -> [[Instruction]]
 removeDuplicates [] = []
 removeDuplicates (i:is) = i : removeDuplicates (filter (/= i) is)
 
---Testing function only. Not required.
+--Returns the value of the highest result from instructions
 executeLargest :: [Int] -> Int
 executeLargest [] = 0
-executeLargest ns = findLargest ns (findCombos (length ns - 1)) 0
+executeLargest ns = findLargest ns (findCombos ((length ns)-1)) 0
 
---Finds the largest possible result from any of the combinations.
+--Finds the largest possible result from any of the combinations that also results in a singleton result
 findLargest :: [Int] -> [[Instruction]] -> Int -> Int
 findLargest ns [] max = max
 findLargest [] is max = 0
 findLargest ns (i:is) max =
-    if head (executeInstructionSequence ns i) > max
-        then findLargest ns is (head (executeInstructionSequence ns i))
+    if maximum (executeInstructionSequence ns i) > max && length (executeInstructionSequence ns i) == 1
+        then findLargest ns is (maximum (executeInstructionSequence ns i))
     else findLargest ns is max
 
 findLargestInstruction :: [Int] -> Int -> [[Instruction]] -> [[Instruction]]
 findLargestInstruction _ _ [] = []
-
-findLargestInstructions ns sum (i:is) =
-    if (head (executeInstructionSequence ns i)) == sum
-        then [i] ++ (findLargestInstruction ns sum is)
-    else []
+findLargestInstruction ns sum (i:is)
+    | (head (executeInstructionSequence ns i)) == sum && length (executeInstructionSequence ns i) == 1 = [i] ++ (findLargestInstruction ns sum is)
+    | otherwise = (findLargestInstruction ns sum is)
 
 -- Exercise 10
 data Rectangle = Rectangle (Int, Int) (Int, Int) deriving (Eq, Show)
