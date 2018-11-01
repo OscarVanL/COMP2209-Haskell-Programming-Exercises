@@ -49,7 +49,27 @@ incrSub sublist (n:ns) =
 -- Exercise 2
 -- longest common sub-list of a finite list of finite list
 longestCommonSubList :: Eq a => [[a]] -> [a]
-longestCommonSubList xs = []
+longestcommonSubList [] = []
+longestCommonSubList xs = findInAll xs (removeDuplicateNums (concat xs))
+
+--Part i and ii from plan
+removeDuplicateNums :: Eq a => [a] -> [a]
+removeDuplicateNums [] = []
+removeDuplicateNums (n:ns) = n : removeDuplicateNums (filter (/= n) ns)
+
+--Checks all the sublists, then returns the longest sublist.
+findInAll :: Eq a => [[a]] -> [a] -> [a]
+findInAll [] longestSub = longestSub
+findInAll (l:ls) enum = findInAll ls (findInSublist l enum)
+
+--Checks a single sublist for each element of the 
+findInSublist :: Eq a => [a] -> [a] -> [a]
+findInSublist sl [] = []
+findInSublist sl (e:en) =
+    if (e `elem` sl)
+        then [e] ++ findInSublist sl en
+    else 
+        findInSublist sl en
 
 -- Exercise 3
 -- check whether the given results are sufficient to pass the year 
