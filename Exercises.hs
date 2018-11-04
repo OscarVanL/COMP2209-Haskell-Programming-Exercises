@@ -136,7 +136,32 @@ getWeightedCredits ms
 -- search for the local maximum of f nearest x using an 
 -- approximation margin delta and initial step value s
 hillClimb :: (Float -> Float) -> Float -> Float -> Float -> Float
-hillClimb d x x' eps = 0.0
+hillClimb d x x' eps = sum(gss d x x' eps (x'-x) True 0 0 True 0 0) /2
+
+gss :: (Float -> Float) -> Float -> Float -> Float -> Float -> Bool -> Float -> Float -> Bool -> Float -> Float -> [Float]
+gss f x x' eps h noC c fc noD d fd
+    | abs(h) <= sqrt (eps) = [x, x']
+    | noC && noD = 
+        if ((f (x+(invPhi*h))< f (x+(invPhiSq*h)))) 
+            then gss f x (x+(invPhi*h)) eps (h*invPhi) True 0 0 False (x+(invPhiSq*h)) (f (x+(invPhiSq*h)))
+        else gss f (x+(invPhiSq*h)) x' eps (h*invPhi) False (x+(invPhi*h)) (f (x+(invPhi*h))) True 0 0
+    | noC && (not noD) =
+        if fd < (f (x+(invPhiSq*h))) 
+            then gss f x d eps (h*invPhi) True 0 0 False (x+(invPhiSq*h)) (f (x+(invPhiSq*h)))
+        else gss f (x+(invPhiSq*h)) x' eps (h*invPhi) False d fd True 0 0
+    | (not noC) && noD =
+        if ((f (x+(invPhi*h))) < fc)
+            then gss f x (x+(invPhi*h)) eps (h*invPhi) True 0 0 False c fc
+        else gss f c x' eps (h*invPhi) False (x+(invPhi*h)) (f (x+(invPhi*h))) True 0 0
+    | otherwise = error "Something's not working."
+
+-- Value of 1/phi
+invPhi :: Float
+invPhi = (sqrt (fromIntegral 5) - 1) / 2
+
+--Value of 1/phi^2
+invPhiSq :: Float
+invPhiSq = (3 - sqrt (fromIntegral 5)) / 2
 
 -- Exercise 6
 nearestRoot :: [Float] -> Float -> Float -> Float -> Float
