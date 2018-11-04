@@ -40,7 +40,7 @@ tests =
       [ 
          ("nearestRoot [-18.0, 0.0, 2.0] 0.0 5.0 1e-5 ~= 3.0",
           approxEqual (nearestRoot [-18.0, 0.0, 2.0] 0.0 5.0 1e-5) 3.0),
-         ("nearestRoot [-18.0, 1.0] 0.0 5.0 1e-5 ~= 18.0",
+         ("nearestRoot [-18.0, 1.0] 15.0 2.0 1e-5 ~= 18.0",
           approxEqual (nearestRoot [-18.0, 1.0] 15.0 20.0 1e-5) 18.0)
       ]),
     ("Exercise 7: executeInstructionSequence",

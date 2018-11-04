@@ -136,23 +136,24 @@ getWeightedCredits ms
 -- search for the local maximum of f nearest x using an 
 -- approximation margin delta and initial step value s
 hillClimb :: (Float -> Float) -> Float -> Float -> Float -> Float
-hillClimb d x x' eps = sum(gss d x x' eps (x'-x) True 0 0 True 0 0) /2
+hillClimb d x x' eps = sum(gssMax d x x' eps (x'-x) True 0 0 True 0 0) /2
 
-gss :: (Float -> Float) -> Float -> Float -> Float -> Float -> Bool -> Float -> Float -> Bool -> Float -> Float -> [Float]
-gss f x x' eps h noC c fc noD d fd
+--Applies the Golden Section Search aiming for a maximum value
+gssMax :: (Float -> Float) -> Float -> Float -> Float -> Float -> Bool -> Float -> Float -> Bool -> Float -> Float -> [Float]
+gssMax f x x' eps h noC c fc noD d fd
     | abs(h) <= sqrt (eps) = [x, x']
     | noC && noD = 
         if ((f (x+(invPhi*h))< f (x+(invPhiSq*h)))) 
-            then gss f x (x+(invPhi*h)) eps (h*invPhi) True 0 0 False (x+(invPhiSq*h)) (f (x+(invPhiSq*h)))
-        else gss f (x+(invPhiSq*h)) x' eps (h*invPhi) False (x+(invPhi*h)) (f (x+(invPhi*h))) True 0 0
+            then gssMax f x (x+(invPhi*h)) eps (h*invPhi) True 0 0 False (x+(invPhiSq*h)) (f (x+(invPhiSq*h)))
+        else gssMax f (x+(invPhiSq*h)) x' eps (h*invPhi) False (x+(invPhi*h)) (f (x+(invPhi*h))) True 0 0
     | noC && (not noD) =
         if fd < (f (x+(invPhiSq*h))) 
-            then gss f x d eps (h*invPhi) True 0 0 False (x+(invPhiSq*h)) (f (x+(invPhiSq*h)))
-        else gss f (x+(invPhiSq*h)) x' eps (h*invPhi) False d fd True 0 0
+            then gssMax f x d eps (h*invPhi) True 0 0 False (x+(invPhiSq*h)) (f (x+(invPhiSq*h)))
+        else gssMax f (x+(invPhiSq*h)) x' eps (h*invPhi) False d fd True 0 0
     | (not noC) && noD =
         if ((f (x+(invPhi*h))) < fc)
-            then gss f x (x+(invPhi*h)) eps (h*invPhi) True 0 0 False c fc
-        else gss f c x' eps (h*invPhi) False (x+(invPhi*h)) (f (x+(invPhi*h))) True 0 0
+            then gssMax f x (x+(invPhi*h)) eps (h*invPhi) True 0 0 False c fc
+        else gssMax f c x' eps (h*invPhi) False (x+(invPhi*h)) (f (x+(invPhi*h))) True 0 0
     | otherwise = error "Something's not working."
 
 -- Value of 1/phi
@@ -165,7 +166,27 @@ invPhiSq = (3 - sqrt (fromIntegral 5)) / 2
 
 -- Exercise 6
 nearestRoot :: [Float] -> Float -> Float -> Float -> Float
-nearestRoot xs x x' eps = 0.0
+nearestRoot xs x x' eps
+        | length xs == 2 = sum (gssMin (\x -> ((xs!!1)*x + (xs!!0))^2) x x' eps (x'-x) True 0 0 True 0 0) / 2
+        | length xs == 3 = sum (gssMin (\x -> ((xs!!2)*x*x + (xs!!1)*x + (xs!!0))^2) x x' eps (x'-x) True 0 0 True 0 0) / 2
+
+--Applies the Golden Section Search aiming for a minimum value
+gssMin :: (Float -> Float) -> Float -> Float -> Float -> Float -> Bool -> Float -> Float -> Bool -> Float -> Float -> [Float]
+gssMin f x x' eps h noC c fc noD d fd
+    | abs(h) <= sqrt (eps) = [x, x']
+    | noC && noD = 
+        if (f (x+(invPhiSq*h))) < (f (x+(invPhi*h)))
+            then gssMin f x (x+(invPhi*h)) eps (h*invPhi) True 0 0 False (x+(invPhiSq*h)) (f (x+(invPhiSq*h)))
+        else gssMin f (x+(invPhiSq*h)) x' eps (h*invPhi) False (x+(invPhi*h)) (f (x+(invPhi*h))) True 0 0
+    | noC && (not noD) =
+        if (f (x+(invPhiSq*h))) < fd
+            then gssMin f x d eps (h*invPhi) True 0 0 False (x+(invPhiSq*h)) (f (x+(invPhiSq*h)))
+        else gssMin f (x+(invPhiSq*h)) x' eps (h*invPhi) False d fd True 0 0
+    | (not noC) && noD =
+        if fc < (f (x+(invPhi*h)))
+            then gssMin f x (x+(invPhi*h)) eps (h*invPhi) True 0 0 False c fc
+        else gssMin f c x' eps (h*invPhi) False (x+(invPhi*h)) (f (x+(invPhi*h))) True 0 0
+    | otherwise = error "Something's not working."
 
 -- Exercise 7
 data Instruction = Add | Multiply | Duplicate | Pop deriving (Eq, Show)
