@@ -52,7 +52,7 @@ longestCommonSubList :: Eq a => [[a]] -> [a]
 longestcommonSubList [] = []
 longestCommonSubList xs = findInAll xs (removeDuplicateNums (concat xs))
 
---Part i and ii from plan
+--Removes duplicate numbers in a list
 removeDuplicateNums :: Eq a => [a] -> [a]
 removeDuplicateNums [] = []
 removeDuplicateNums (n:ns) = n : removeDuplicateNums (filter (/= n) ns)
@@ -76,14 +76,61 @@ findInSublist sl (e:en) =
 -- and progress using the University of Southampton Calendar regulations
 data ModuleResult = ModuleResult { credit :: Float, mark :: Int} deriving Show
 canProgress :: [ModuleResult] -> Bool
-canProgress ms = False
+canProgress ms
+    | (allPassed ms) && (sufficientCredits ms) = True
+    | not (anyUnqualified ms) && (failedCredits ms  < 15) && (sufficientCredits ms) = True
+    | otherwise = False
+
+--If all modules achieve 40% or higher then returns True.
+allPassed :: [ModuleResult] -> Bool
+allPassed [] = True
+allPassed (m:ms) = if (mark m) < 40 then False else (allPassed ms)
+
+--Checks if any of the module marks don't meet the qualifying mark
+anyUnqualified :: [ModuleResult] -> Bool
+anyUnqualified [] = False
+anyUnqualified (m:ms) = if (mark m) < 25 then True else (anyUnqualified ms)
+
+--Calculates the number of credits in failed modules (less than 40 marks).
+failedCredits :: [ModuleResult] -> Int
+failedCredits ms = sum $ map (\(c,m) -> if m < 40 then round c else 0) (zip (map credit ms) (map mark ms))
+
+sufficientCredits :: [ModuleResult] -> Bool
+sufficientCredits cs
+    | sum (map credit cs) >= 60 = True
+    | otherwise = False
 
 -- Exercise 4
 -- compute the degree classification associate with 3 or 4 year's worth of results
 -- using the regulations given in the University of Southampton Calendar
 data DegreeClass = First | UpperSecond | LowerSecond | Third deriving (Eq, Show)
 classify :: [[ModuleResult]] -> DegreeClass
-classify ms = Third 
+classify ms
+    | length ms == 3 = determineClassification (getWeightedMarks (ms !! 1) 1 + getWeightedMarks (ms !! 2) 2) (getWeightedCredits ms)
+    | length ms == 4 = determineClassification (getWeightedMarks (ms !! 1) 1 + getWeightedMarks (ms !! 2) 2 + getWeightedMarks (ms !! 3) 2) (getWeightedCredits ms)
+    | otherwise = error "Not completed sufficient years of degree"
+
+--Used to finally determine classification once weighted marks and weighted credits have been calculated
+determineClassification :: Float -> Float -> DegreeClass
+determineClassification m c
+    | (m / c) > 70.0 = First
+    | (m / c) > 59.0 && (m / c) < 70.0 = UpperSecond
+    | (m / c) > 49.0 && (m / c) < 60.0 = LowerSecond
+    | (m / c) > 39.0 && (m / c) < 50.0 = Third
+    | otherwise = error "Marks too low for classification"
+
+--Gets the weighted marks for a year's module results. Returns as float as some modules have decimal credits, eg: 7.5
+getWeightedMarks :: [ModuleResult] -> Int -> Float
+getWeightedMarks ms weight =
+    (sum $ map (\(c,m) -> c*m) (zip (map credit ms) (map (fromIntegral . mark) ms))) * fromIntegral(weight)
+
+    --Gets the weighted marks for a year's module results. Returns as float as some modules have decimal credits, eg: 7.5
+getWeightedCredits :: [[ModuleResult]] -> Float
+getWeightedCredits [] = 0
+getWeightedCredits ms
+    | length ms == 3 = (sum $ map credit (ms !! 1)) + ((sum $ map credit (ms !! 2)) * fromIntegral(2))
+    | length ms == 4 = (sum $ map credit (ms !! 1)) + ((sum $ map credit (ms !! 2)) * fromIntegral(2)) + ((sum $ map credit (ms !! 3)) * fromIntegral(2))
+    | otherwise = error "Not completed sufficient years of degree"
 
 -- Exercise 5
 -- search for the local maximum of f nearest x using an 
