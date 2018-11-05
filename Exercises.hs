@@ -311,7 +311,14 @@ bitDecoder (a:b:xs) str
 -- return a stream which is different from all streams of the given stream
 -- you may choose to use Cantor's diagonal method 
 differentStream :: [[Int]] -> [Int]
-differentStream ss = []
+differentStream [] = []
+differentStream ss = newStream ss 0
+
+newStream :: [[Int]] -> Int -> [Int]
+newStream [] _ = []
+newStream (s:ss) n
+    | (s !! n) == 1 = 0 : newStream (ss) (n+1)
+    | otherwise = 1 : newStream (ss) (n+1)
 
 -- Exercise 14
 -- extract both components from a square shell pair and apply the (curried) function
