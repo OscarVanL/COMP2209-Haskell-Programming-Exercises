@@ -275,7 +275,118 @@ findLargestInstruction ns sum (i:is)
 -- Exercise 10
 data Rectangle = Rectangle (Int, Int) (Int, Int) deriving (Eq, Show)
 simplifyRectangleList :: [Rectangle] -> [Rectangle]
-simplifyRectangleList rs = []
+simplifyRectangleList rs =
+    --Two algorithms are used, 'tidyRects' is a more simple algorithm that orders by largest area and then removes overlapping rectangles
+    --'combineRects' is a more complex algorithm. Returns whichever gives the smallest number of rectangles.
+    if (length (tidyRect rs)) < (length (combineRects [] (allRectCoords (tidyRect rs) [])))
+        then tidyRect rs
+    else combineRects [] (allRectCoords (tidyRect rs) [])
+
+--Helper functions:
+
+tidyRect :: [Rectangle] -> [Rectangle]
+tidyRect rs = removeFullOverlap (quickSortArea (removeErroneous rs)) [] []
+
+combineRects :: [Rectangle] -> [(Int, Int)] -> [Rectangle]
+combineRects simplified [] = simplified
+-- LOOK AT THIS LINE FOR POSSIBLE ERROR
+combineRects simplified allCoords = combineRects ([rect] ++ simplified) (filter ((`notElem` (filter (`notElem` (getConnectedCoords allCoords rect))) (containedCoords rect))) allCoords)
+    where rect = createRect allCoords
+
+createRect :: [(Int, Int)] -> Rectangle
+createRect allCoords = Rectangle bottomLeft topRight
+    where 
+        bottomLeft = foldl1 (\x y -> if x < y then x else y) (filter (\c -> fst c == findMinimumX allCoords) allCoords)
+        topRight = foldl1 (\x y -> if x > y then x else y) (moveToEnd (filter (\c -> fst c == findMinimumX allCoords) allCoords) allCoords)
+    
+findMinimumX :: [(Int, Int)] -> Int
+findMinimumX coords = foldr1 min (map fst coords)
+
+findMaximumX :: [(Int, Int)] -> Int
+findMaximumX coords = foldr1 max (map fst coords)
+
+findMinimumY :: [(Int, Int)] -> Int
+findMinimumY coords = foldr1 min (map snd coords)
+
+findMaximumY :: [(Int, Int)] -> Int
+findMaximumY coords = foldr1 max (map snd coords)
+
+allRectCoords :: [Rectangle] -> [(Int, Int)] -> [(Int, Int)]
+allRectCoords [] coord = removeDuplicateNums coord
+allRectCoords (r:rs) coord = allRectCoords rs (coord ++ containedCoords r)
+
+containedCoords :: Rectangle -> [(Int, Int)]
+containedCoords r = [ (x,y) | x <- [(fst (btmLeft r)) .. (fst (btmRght r))], y <- [(snd (btmLeft r)) .. (snd (topLeft r))]]
+
+cornerCoords :: Rectangle -> [(Int, Int)]
+cornerCoords r = [(topRght r)] ++ [(topLeft r)] ++ [(btmRght r)] ++ [(btmLeft r)]
+
+topRght :: Rectangle -> (Int, Int)
+topRght (Rectangle _ coord) = coord
+
+topLeft :: Rectangle -> (Int, Int)
+topLeft (Rectangle (x, y) (x', y')) = (x,y') 
+
+btmRght :: Rectangle -> (Int, Int)
+btmRght (Rectangle (x, y) (x', y')) = (x', y)
+
+btmLeft :: Rectangle -> (Int,Int)
+btmLeft (Rectangle coord _) = coord
+
+rectArea :: Rectangle -> Int
+rectArea r = (fst (topRght r) - fst (btmLeft r)) * (snd (topRght r) - snd (btmLeft r))
+
+--Adapting quick sort algorithm from lab exercise sheet 1 to descendingly sort rectangles by their area.
+quickSortArea :: [Rectangle] -> [Rectangle]
+quickSortArea [] = []
+quickSortArea (r:rs) = quickSortArea left ++ [r] ++ quickSortArea right
+    where
+        left = [ a | a <- rs , (rectArea a) > (rectArea r) ]
+        right = [ a | a <- rs , (rectArea a) <= (rectArea r)]
+
+--Removes erroneous rectangles by only permitting rectangles where the top right is right and above the bottom left.
+removeErroneous :: [Rectangle] -> [Rectangle]
+removeErroneous [] = []
+removeErroneous (r:rs) =
+    if (fst (topRght r) > (fst (btmLeft r))) && (snd (topRght r) > (snd (btmLeft r)))
+        then [r] ++ removeErroneous rs
+    else removeErroneous rs
+
+--Removes rectangles that fully overlap eachother, for example [Rectangle (0,0) (2,2), Rectangle (0,0) (2,2)] would become [Rectangle (0,0) (2,2)]
+removeFullOverlap :: [Rectangle] -> [Rectangle] -> [(Int, Int)] -> [Rectangle]
+removeFullOverlap [] final _ = final
+removeFullOverlap (r:rs) final visited
+    | not ((topRght r) `elem` visited) ||
+      not ((topLeft r) `elem` visited) ||
+      not ((btmRght r) `elem` visited) ||
+      not ((btmLeft r) `elem` visited) = removeFullOverlap rs (final ++ [r]) (visited ++ (containedCoords r)) 
+    | otherwise = removeFullOverlap rs final visited
+
+--Returns a list of any coordinates directly * above the top edge of the rectangle * below the bottom edge * left of the left edge * right of the right edge
+getConnectedCoords :: [(Int, Int)] -> Rectangle -> [(Int, Int)]
+getConnectedCoords allCoords r = (filter (\c -> (fst c, snd c + 1) `elem` otherCoords) top) ++ (filter (\c -> (fst c, snd c - 1) `elem` otherCoords) bottom) ++ (filter (\c -> (fst c - 1, snd c) `elem` otherCoords) left) ++ (filter (\c -> (fst c + 1, snd c) `elem` otherCoords) right)
+    where 
+        rCoords = containedCoords r
+        top = filter (\c -> snd c == findMaximumY rCoords) rCoords
+        bottom = filter (\c -> snd c == findMinimumY rCoords) rCoords
+        left = filter (\c -> snd c == findMinimumX rCoords) rCoords
+        right = filter (\c -> snd c == findMaximumX rCoords) rCoords
+        otherCoords = filter (`notElem` (containedCoords r)) allCoords
+
+moveToEnd :: [(Int, Int)] -> [(Int, Int)] -> [(Int, Int)]
+moveToEnd row allCoords = 
+    if (outsideRects nextRow allCoords == False)
+        then moveToEnd nextRow allCoords
+    else row
+    where
+        --Increases all coordinates x for the row by 1 to move to the next row
+        nextRow = map (\c -> ((fst c) + 1, snd c)) row
+    
+outsideRects :: [(Int, Int)] -> [(Int, Int)] -> Bool
+outsideRects nextRow allCoords =
+    if (length (filter (\c -> c `notElem` allCoords) nextRow) > 0)
+        then True
+    else False
 
 -- Exercise 11
 -- convert an ellipse into a minimal list of rectangles representing its image
@@ -323,7 +434,14 @@ newStream (s:ss) n
 -- Exercise 14
 -- extract both components from a square shell pair and apply the (curried) function
 unPairAndApply :: Int -> (Int -> Int -> a) -> a
-unPairAndApply n f = f 0 0
+unPairAndApply n f =
+    if (n - (z n)^2 ) < (z n)
+        then f (n - (z n)^2 ) (z n)
+    else
+        f (z n) ((z n)^2 + 2*((z n)) - n)
+
+z :: Int -> Int
+z n = floor (sqrt (fromIntegral (n)))
 
 -- Exercise 15
 isShellTreeSum :: Int -> Bool
