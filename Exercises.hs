@@ -466,13 +466,30 @@ newStream (s:ss) n
 unPairAndApply :: Int -> (Int -> Int -> a) -> a
 unPairAndApply n f =
     if (n - (z n)^2 ) < (z n)
-        then f (n - (z n)^2 ) (z n)
+        then f (n - (z n)^2 ) (z n) 
     else
         f (z n) ((z n)^2 + 2*((z n)) - n)
+
+unpair :: Int -> (Int, Int)
+unpair n =
+    if (n - (z n)^2 ) < (z n)
+        then ((n - (z n)^2 ), (z n))
+    else
+        ((z n), ((z n)^2 + 2*((z n)) - n))
 
 z :: Int -> Int
 z n = floor (sqrt (fromIntegral (n)))
 
 -- Exercise 15
 isShellTreeSum :: Int -> Bool
-isShellTreeSum n = False
+isShellTreeSum n
+    | unpairAndSum 0 first == sumTo = True
+    | otherwise = False
+    where 
+        sumTo = snd (unpair n)
+        first = fst (unpair n)
+
+unpairAndSum :: Int -> Int -> Int
+unpairAndSum sum 1 = sum
+unpairAndSum sum 0 = sum
+unpairAndSum sum n = (fst (unpair n)) + unpairAndSum 0 (fst(unpair (snd (unpair n)))) + unpairAndSum 0 (snd(unpair(snd (unpair n))))
