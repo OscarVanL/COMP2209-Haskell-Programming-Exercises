@@ -106,17 +106,17 @@ sufficientCredits cs
 data DegreeClass = First | UpperSecond | LowerSecond | Third deriving (Eq, Show)
 classify :: [[ModuleResult]] -> DegreeClass
 classify ms
-    | length ms == 3 = determineClassification (getWeightedMarks (ms !! 1) 1 + getWeightedMarks (ms !! 2) 2) (getWeightedCredits ms)
-    | length ms == 4 = determineClassification (getWeightedMarks (ms !! 1) 1 + getWeightedMarks (ms !! 2) 2 + getWeightedMarks (ms !! 3) 2) (getWeightedCredits ms)
+    | length ms == 3 = determineClassification ms (getWeightedMarks (ms !! 1) 1 + getWeightedMarks (ms !! 2) 2) (getWeightedCredits ms)
+    | length ms == 4 = determineClassification ms (getWeightedMarks (ms !! 1) 1 + getWeightedMarks (ms !! 2) 2 + getWeightedMarks (ms !! 3) 2) (getWeightedCredits ms)
     | otherwise = error "Not completed sufficient years of degree"
 
 --Used to finally determine classification once weighted marks and weighted credits have been calculated
-determineClassification :: Float -> Float -> DegreeClass
-determineClassification m c
-    | (m / c) > 70.0 = First
-    | (m / c) > 59.0 && (m / c) < 70.0 = UpperSecond
-    | (m / c) > 49.0 && (m / c) < 60.0 = LowerSecond
-    | (m / c) > 39.0 && (m / c) < 50.0 = Third
+determineClassification :: [[ModuleResult]] -> Float -> Float -> DegreeClass
+determineClassification ms m c
+    | (round (m / c)) >= 70 || ((m / c) >= 68.0 && (doesUpgrade ms First)) = First
+    | (round (m / c)) >= 60 || ((m / c) >= 58.0 && (doesUpgrade ms UpperSecond)) = UpperSecond
+    | (round (m / c)) >= 50 || ((m / c) >= 48.0 && (doesUpgrade ms LowerSecond)) = LowerSecond
+    | (round (m / c)) >= 40 || ((m / c) >= 38.0 && (doesUpgrade ms Third)) = Third
     | otherwise = error "Marks too low for classification"
 
 --Gets the weighted marks for a year's module results. Returns as float as some modules have decimal credits, eg: 7.5
@@ -124,13 +124,38 @@ getWeightedMarks :: [ModuleResult] -> Int -> Float
 getWeightedMarks ms weight =
     (sum $ map (\(c,m) -> c*m) (zip (map credit ms) (map (fromIntegral . mark) ms))) * fromIntegral(weight)
 
-    --Gets the weighted marks for a year's module results. Returns as float as some modules have decimal credits, eg: 7.5
+--Gets the weighted marks for a year's module results. Returns as float as some modules have decimal credits, eg: 7.5
 getWeightedCredits :: [[ModuleResult]] -> Float
 getWeightedCredits [] = 0
 getWeightedCredits ms
     | length ms == 3 = (sum $ map credit (ms !! 1)) + ((sum $ map credit (ms !! 2)) * fromIntegral(2))
     | length ms == 4 = (sum $ map credit (ms !! 1)) + ((sum $ map credit (ms !! 2)) * fromIntegral(2)) + ((sum $ map credit (ms !! 3)) * fromIntegral(2))
     | otherwise = error "Not completed sufficient years of degree"
+
+doesUpgrade :: [[ModuleResult]] -> DegreeClass -> Bool
+doesUpgrade ms c
+    | (higherCredits / credits) >= 0.5 = True
+    | otherwise = False
+    where
+        credits = getWeightedCredits ms
+        higherCredits = getWeightedHigherCredits ms c
+
+getWeightedHigherCredits :: [[ModuleResult]] -> DegreeClass -> Float
+getWeightedHigherCredits ms c
+    | length ms == 3 = (yearWeightedHigherCredits (ms !! 1) minMarks 1) + (yearWeightedHigherCredits (ms !! 2) minMarks 2)
+    | length ms == 4 = (yearWeightedHigherCredits (ms !! 1) minMarks 1) + (yearWeightedHigherCredits (ms !! 2) minMarks 2) + (yearWeightedHigherCredits (ms !! 3) minMarks 2)
+    where
+        minMarks = classBoundary c
+
+classBoundary :: DegreeClass -> Float
+classBoundary First = 70.0
+classBoundary UpperSecond = 60.0
+classBoundary LowerSecond = 50.0
+classBoundary Third = 40.0
+
+yearWeightedHigherCredits :: [ModuleResult] -> Float -> Int -> Float
+yearWeightedHigherCredits ms minMarks weight =
+    (sum $ map fst (zip (map credit ms) (filter (>=minMarks) $ map (fromIntegral . mark) ms))) * fromIntegral(weight)
 
 -- Exercise 5
 -- search for the local maximum of f nearest x using an 
@@ -289,7 +314,6 @@ tidyRect rs = removeFullOverlap (quickSortArea (removeErroneous rs)) [] []
 
 combineRects :: [Rectangle] -> [(Int, Int)] -> [Rectangle]
 combineRects simplified [] = simplified
--- LOOK AT THIS LINE FOR POSSIBLE ERROR
 combineRects simplified allCoords = combineRects ([rect] ++ simplified) (filter ((`notElem` (filter (`notElem` (getConnectedCoords allCoords rect))) (containedCoords rect))) allCoords)
     where rect = createRect allCoords
 
@@ -391,7 +415,13 @@ outsideRects nextRow allCoords =
 -- Exercise 11
 -- convert an ellipse into a minimal list of rectangles representing its image
 drawEllipse :: Float -> Float -> Float -> Float -> [Rectangle]
-drawEllipse x y a b = []
+drawEllipse xCntr yCntr a b = simplifyRectangleList (combineRects [] (filterPoints potentialCoords xCntr yCntr a b) )
+    where
+        potentialCoords = containedCoords (Rectangle (floor(xCntr-sqrt(a)), floor(yCntr-sqrt(b))) (ceiling(xCntr+sqrt(a)), ceiling(yCntr+sqrt(b))))
+
+filterPoints :: [(Int, Int)] -> Float -> Float -> Float -> Float -> [(Int, Int)]
+filterPoints [] xCntr yCntr a b = []
+filterPoints coords xCntr yCntr a b = filter (\(x,y) -> (((fromIntegral(x)-xCntr)^2 / a) + ((fromIntegral(y)-yCntr)^2 / b) <= 1)) coords
 
 -- Exercise 12
 -- extract a message hidden using a simple steganography technique
