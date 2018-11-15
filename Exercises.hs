@@ -25,6 +25,7 @@ splitSort (x:y:ns)
     | x > y = [fst (decrSub (x:y:[]) ns)] ++ splitSort (snd (decrSub (x:y:[]) ns))
     | x < y = [fst (incrSub (x:y:[]) ns)] ++ splitSort (snd (incrSub (x:y:[]) ns))
 
+--Creates the longest possible sublist where the two previous elements were equal
 eqSub :: Ord a => [a] -> [a] -> ([a],[a])
 eqSub sublist [] = (sublist, [])
 eqSub sublist (n:ns) =
@@ -32,6 +33,7 @@ eqSub sublist (n:ns) =
         then eqSub (n:sublist) ns
     else (sublist , n:ns)
 
+--Creates the longest possible sublist where the two previous elements were decreasing
 decrSub :: Ord a => [a] -> [a] -> ([a],[a])
 decrSub sublist [] = (sublist, [])
 decrSub sublist (n:ns) =
@@ -39,6 +41,7 @@ decrSub sublist (n:ns) =
         then decrSub (sublist ++ [n]) ns
     else (sublist, n:ns)
 
+--Creates the longest possible sublist where the two previous elements were increasing
 incrSub :: Ord a => [a] -> [a] -> ([a],[a])
 incrSub sublist [] = (sublist, [])
 incrSub sublist (n:ns) = 
@@ -95,6 +98,7 @@ anyUnqualified (m:ms) = if (mark m) < 25 then True else (anyUnqualified ms)
 failedCredits :: [ModuleResult] -> Int
 failedCredits ms = sum $ map (\(c,m) -> if m < 40 then round c else 0) (zip (map credit ms) (map mark ms))
 
+--Returns whether the sum of module credits were at least 60
 sufficientCredits :: [ModuleResult] -> Bool
 sufficientCredits cs
     | sum (map credit cs) >= 60 = True
@@ -132,6 +136,7 @@ getWeightedCredits ms
     | length ms == 4 = (sum $ map credit (ms !! 1)) + ((sum $ map credit (ms !! 2)) * fromIntegral(2)) + ((sum $ map credit (ms !! 3)) * fromIntegral(2))
     | otherwise = error "Not completed sufficient years of degree"
 
+--Checks if enough of the module marks exceeded the classification boundary to allow us to upgrade with the 2% rule
 doesUpgrade :: [[ModuleResult]] -> DegreeClass -> Bool
 doesUpgrade ms c
     | (higherCredits / credits) >= 0.5 = True
@@ -140,6 +145,7 @@ doesUpgrade ms c
         credits = getWeightedCredits ms
         higherCredits = getWeightedHigherCredits ms c
 
+--Gets overall credit amount of all years weighted by year
 getWeightedHigherCredits :: [[ModuleResult]] -> DegreeClass -> Float
 getWeightedHigherCredits ms c
     | length ms == 3 = (yearWeightedHigherCredits (ms !! 1) minMarks 1) + (yearWeightedHigherCredits (ms !! 2) minMarks 2)
@@ -147,12 +153,14 @@ getWeightedHigherCredits ms c
     where
         minMarks = classBoundary c
 
+--Defines the boundaries for different years
 classBoundary :: DegreeClass -> Float
 classBoundary First = 70.0
 classBoundary UpperSecond = 60.0
 classBoundary LowerSecond = 50.0
 classBoundary Third = 40.0
 
+--Gets overall amount of credits where marks exceeded the classification boundary
 yearWeightedHigherCredits :: [ModuleResult] -> Float -> Int -> Float
 yearWeightedHigherCredits ms minMarks weight =
     (sum $ map fst (zip (map credit ms) (filter (>=minMarks) $ map (fromIntegral . mark) ms))) * fromIntegral(weight)
@@ -219,6 +227,7 @@ executeInstructionSequence :: [Int] -> [Instruction] -> [Int]
 executeInstructionSequence ns [] = ns
 executeInstructionSequence ns (i:ins) = executeInstructionSequence ( executeInstruction ns i ) ins
 
+--Executes an instruction on a list of integers
 executeInstruction :: [Int] -> Instruction -> [Int]
 executeInstruction [_] Pop = []
 executeInstruction (a:b:ns) i
@@ -291,6 +300,7 @@ findLargest ns (i:is) max =
         then findLargest ns is (maximum (executeInstructionSequence ns i))
     else findLargest ns is max
 
+--Finds the instructions that lead to the biggest result
 findLargestInstruction :: [Int] -> Int -> [[Instruction]] -> [[Instruction]]
 findLargestInstruction _ _ [] = []
 findLargestInstruction ns sum (i:is)
@@ -308,55 +318,69 @@ simplifyRectangleList rs =
     else combineRects [] (allRectCoords (tidyRect rs) [])
 
 --Helper functions:
-
+--Removes erroneous rectangles, then quick sorts them by area, then removes any fully overlapping ones.
 tidyRect :: [Rectangle] -> [Rectangle]
 tidyRect rs = removeFullOverlap (quickSortArea (removeErroneous rs)) [] []
 
+--Takes a list of coordinates contained inside the rectangles and produces a new simplified list of rectangles
 combineRects :: [Rectangle] -> [(Int, Int)] -> [Rectangle]
 combineRects simplified [] = simplified
 combineRects simplified allCoords = combineRects ([rect] ++ simplified) (filter ((`notElem` (filter (`notElem` (getConnectedCoords allCoords rect))) (containedCoords rect))) allCoords)
     where rect = createRect allCoords
 
+--Creates the largest possible rectangle given the coordinate restrictions
 createRect :: [(Int, Int)] -> Rectangle
 createRect allCoords = Rectangle bottomLeft topRight
     where 
         bottomLeft = foldl1 (\x y -> if x < y then x else y) (filter (\c -> fst c == findMinimumX allCoords) allCoords)
         topRight = foldl1 (\x y -> if x > y then x else y) (moveToEnd (filter (\c -> fst c == findMinimumX allCoords) allCoords) allCoords)
     
+--Finds the minimum X coordinate from a list of coordinates
 findMinimumX :: [(Int, Int)] -> Int
 findMinimumX coords = foldr1 min (map fst coords)
 
+--Finds the maximum X coordinate from a list of coordinates
 findMaximumX :: [(Int, Int)] -> Int
 findMaximumX coords = foldr1 max (map fst coords)
 
+--Finds the minimum Y coordinate from a list of coordinates
 findMinimumY :: [(Int, Int)] -> Int
 findMinimumY coords = foldr1 min (map snd coords)
 
+--Finds the maximum Y coordinate from a list of coordinates
 findMaximumY :: [(Int, Int)] -> Int
 findMaximumY coords = foldr1 max (map snd coords)
 
+--Produces a list of all the coordinates contained inside a list of rectangles, removing any duplicates.
 allRectCoords :: [Rectangle] -> [(Int, Int)] -> [(Int, Int)]
 allRectCoords [] coord = removeDuplicateNums coord
 allRectCoords (r:rs) coord = allRectCoords rs (coord ++ containedCoords r)
 
+--Produces a list of the coordinates contained inside a single rectangle
 containedCoords :: Rectangle -> [(Int, Int)]
 containedCoords r = [ (x,y) | x <- [(fst (btmLeft r)) .. (fst (btmRght r))], y <- [(snd (btmLeft r)) .. (snd (topLeft r))]]
 
+--Returns a list of the corner coordinates of a rectangle
 cornerCoords :: Rectangle -> [(Int, Int)]
 cornerCoords r = [(topRght r)] ++ [(topLeft r)] ++ [(btmRght r)] ++ [(btmLeft r)]
 
+--Returns the top right coordinate of a rectangle
 topRght :: Rectangle -> (Int, Int)
 topRght (Rectangle _ coord) = coord
 
+--Returns the top left coordinate of a rectangle
 topLeft :: Rectangle -> (Int, Int)
 topLeft (Rectangle (x, y) (x', y')) = (x,y') 
 
+--Returns the bottom right coordinate of a rectangle
 btmRght :: Rectangle -> (Int, Int)
 btmRght (Rectangle (x, y) (x', y')) = (x', y)
 
+--Returns the bottom left coordinate of a rectangle
 btmLeft :: Rectangle -> (Int,Int)
 btmLeft (Rectangle coord _) = coord
 
+--Returns the area occupied by a rectangle to allow for sorting rectangles by size
 rectArea :: Rectangle -> Int
 rectArea r = (fst (topRght r) - fst (btmLeft r)) * (snd (topRght r) - snd (btmLeft r))
 
@@ -372,7 +396,7 @@ quickSortArea (r:rs) = quickSortArea left ++ [r] ++ quickSortArea right
 removeErroneous :: [Rectangle] -> [Rectangle]
 removeErroneous [] = []
 removeErroneous (r:rs) =
-    if (fst (topRght r) > (fst (btmLeft r))) && (snd (topRght r) > (snd (btmLeft r)))
+    if (fst (topRght r) >= (fst (btmLeft r))) && (snd (topRght r) >= (snd (btmLeft r)))
         then [r] ++ removeErroneous rs
     else removeErroneous rs
 
@@ -397,6 +421,7 @@ getConnectedCoords allCoords r = (filter (\c -> (fst c, snd c + 1) `elem` otherC
         right = filter (\c -> snd c == findMaximumX rCoords) rCoords
         otherCoords = filter (`notElem` (containedCoords r)) allCoords
 
+--Moves to the furthest possible 
 moveToEnd :: [(Int, Int)] -> [(Int, Int)] -> [(Int, Int)]
 moveToEnd row allCoords = 
     if (outsideRects nextRow allCoords == False)
@@ -455,6 +480,7 @@ differentStream :: [[Int]] -> [Int]
 differentStream [] = []
 differentStream ss = newStream ss 0
 
+--Produces a new stream using diagonalisation that is unique.
 newStream :: [[Int]] -> Int -> [Int]
 newStream [] _ = []
 newStream (s:ss) n
@@ -470,6 +496,7 @@ unPairAndApply n f =
     else
         f (z n) ((z n)^2 + 2*((z n)) - n)
 
+--Unpairs from shell paired numbers
 unpair :: Int -> (Int, Int)
 unpair n =
     if (n - (z n)^2 ) < (z n)
